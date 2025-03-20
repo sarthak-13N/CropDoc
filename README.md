@@ -2,6 +2,24 @@
 
 CropDoc is a comprehensive mobile application designed to help farmers and agricultural enthusiasts manage crop health and get timely recommendations. The app offers various features including crop disease detection, weather updates, crop recommendations, and an AI-based chatbot for additional assistance.
 
+## Screenshots  
+
+### **Login Screen**  
+![Login Screen](screenshots/IMG-20250315-WA0005.jpg)  
+
+### **Disease Detection**  
+![Disease Detection](screenshots/IMG-20250320-WA0008.jpg)  
+
+### **Weather Forecast**  
+![Weather Forecast](screenshots/IMG-20250316-WA0001.jpg)  
+
+### **Crop Recommendation**  
+![Crop Recommendation](screenshots/IMG-20250316-WA0006.jpg)  
+
+### **Chatbot**  
+![Chatbot](screenshots/IMG-20250316-WA0007.jpg)  
+
+
 ## Features
 
 - **User Authentication**: Secure registration, login, and logout functionality.
