@@ -223,9 +223,28 @@ Contributions are welcome! Please follow these steps:
 
 This project is licensed under the [MIT License](LICENSE).
 
-## Contact
+## Contact Details
 
-For any questions or suggestions, please contact sarthaknimble@gmail.com(mailto:sarthaknimble@gmail.com).
+- **Sarthak Nimble**  
+  - ✉️ Email: [sarthknimble@outlook.com](mailto:sarthknimble@outlook.com)  
+  - 🐙 GitHub: [sarthak-13N](https://github.com/sarthak-13N)  
+  - 🔗 LinkedIn: [Sarthak Nimble](https://www.linkedin.com/in/sarthak-nimble1642)  
+
+- **Bhagyalaxmi Bamungi**  
+  - ✉️ Email: bhagyalaxmib2004j2@gmail.com  
+  - 🐙 GitHub: [GitHub Profile](https://github.com/Bhagyalaxmi-24)  
+  - 🔗 LinkedIn: [LinkedIn Profile](https://www.linkedin.com/in/bhagyalaxmi-bamungi-132685265)  
+
+- **Tejas Barguje**  
+  - ✉️ Email: [tejasbarguje9@gmail.com](mailto:tejasbarguje9@gmail.com)  
+  - 🐙 GitHub: [GitHub Profile](https://github.com/tejasbargujepatil)  
+  - 🔗 LinkedIn: [LinkedIn Profile](https://www.linkedin.com/in/tejas-cybersecurityanalyst-)  
+
+- **Shravani Kindre**  
+  - ✉️ Email: shravanikindre09@gmail.com  
+  - 🐙 GitHub: [GitHub Profile](https://github.com/Shravani05-tech)  
+  - 🔗 LinkedIn: [LinkedIn Profile](https://www.linkedin.com/in/shravani-kindre-2b4a67339)  
+
 
 
 Happy coding and farming with CropDoc!
