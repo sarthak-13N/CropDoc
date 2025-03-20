@@ -1,36 +1,90 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
   FlatList,
+  Image,
+  ActivityIndicator,
   StyleSheet,
+  Button,
   TouchableOpacity,
-  BackHandler,
-  Alert
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import axios from "axios";
+import jwtDecode from "jwt-decode";
+import { Card } from "react-native-paper";
 import { Ionicons } from "@expo/vector-icons";
 
-type HistoryProps = {
-  onClose: () => void;
-};
-
 interface HistoryItem {
-  id: string;
-  date: string;
-  diagnosis: string;
-  treatment: string;
+  history_id: number;
+  treatment_class: string;
+  user_id: number;
+  created_at: string;
+  treatment_id: number;
+  disease: string;
+  symptoms: string;
+  chemical_treatment: string;
+  organic_treatment?: string | null;
+  disease_image?: string;
 }
 
-const historyData: HistoryItem[] = [
-  { id: "1", date: "2025-03-01", diagnosis: "रोग A", treatment: "उपचार X" },
-  { id: "2", date: "2025-03-02", diagnosis: "रोग B", treatment: "उपचार Y" },
-  { id: "3", date: "2025-03-03", diagnosis: "रोग C", treatment: "उपचार Z" },
-];
+interface Props {
+  onClose: () => void;
+}
 
-export default function HistoryScreen({ onClose }: HistoryProps) {
+const HistoryScreen: React.FC<Props> = ({ onClose }) => {
+  const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchUserHistory();
+  }, []);
+
+  const fetchUserHistory = async () => {
+    try {
+      const token = await AsyncStorage.getItem("token");
+      const userId = await AsyncStorage.getItem("userId");
+
+      if (!token || !userId) {
+        throw new Error("Authentication error. Please log in again.");
+      }
+
+      const response = await axios.get<HistoryItem[]>(
+        `https://cropdocback.onrender.com/history/${userId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      setHistory(response.data);
+    } catch (error) {
+      console.error("Error fetching history:", error);
+      setError("Failed to load history. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <ActivityIndicator size="large" color="#6200ee" style={styles.loader} />
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorText}>{error}</Text>
+        <Button title="Close" onPress={onClose} />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
-      {/* Header */}
       <View style={styles.headerContainer}>
         <TouchableOpacity style={styles.closeButton} onPress={onClose}>
           <Ionicons name="arrow-back" size={24} color="black" />
@@ -38,27 +92,44 @@ export default function HistoryScreen({ onClose }: HistoryProps) {
         </TouchableOpacity>
       </View>
 
-      {/* History List */}
       <FlatList
-        data={historyData}
-        keyExtractor={(item) => item.id}
+        data={history}
+        // keyExtractor={(item, index) => `${item.history_id || index}`}
         renderItem={({ item }) => (
-          <View style={styles.itemContainer}>
-            <Text style={styles.itemDate}>{item.date}</Text>
-            <Text style={styles.itemDiagnosis}>निदान: {item.diagnosis}</Text>
-            <Text style={styles.itemTreatment}>उपचार: {item.treatment}</Text>
-          </View>
+          <Card style={styles.card}>
+            <Card.Content>
+              <Text style={styles.title}>{item.treatment_class}</Text>
+              <Text style={styles.subtitle}>Disease: {item.disease}</Text>
+              <Text style={styles.symptoms}>Symptoms: {item.symptoms}</Text>
+              <Text style={styles.treatment}>
+                Chemical Treatment: {item.chemical_treatment}
+              </Text>
+              {item.organic_treatment && (
+                <Text style={styles.treatment}>
+                  Organic Treatment: {item.organic_treatment}
+                </Text>
+              )}
+              {item.disease_image && (
+                <Image
+                  source={{ uri: item.disease_image }}
+                  style={styles.image}
+                />
+              )}
+              <Text style={styles.date}>
+                Date: {new Date(item.created_at).toDateString()}
+              </Text>
+            </Card.Content>
+          </Card>
         )}
       />
     </View>
   );
-}
+};
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
-    backgroundColor: "#fff",
+  closeButton: {
+    flexDirection: "row",
+    alignItems: "center",
   },
   headerContainer: {
     flexDirection: "row",
@@ -68,43 +139,17 @@ const styles = StyleSheet.create({
     borderBottomColor: "#ccc",
     marginBottom: 20,
   },
-  closeButton: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: "bold",
-    marginLeft: 10,
-    color: "#2C2C2C",
-  },
-  itemContainer: {
-    padding: 15,
-    backgroundColor: "#F7F7F7",
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#e0e0e0",
-    marginBottom: 10,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3, // For Android shadow
-  },
-  itemDate: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#333",
-    marginBottom: 5,
-  },
-  itemDiagnosis: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#444",
-    marginBottom: 5,
-  },
-  itemTreatment: {
-    fontSize: 14,
-    color: "#666",
-  },
+  container: { flex: 1, padding: 10, backgroundColor: "#f5f5f5" },
+  loader: { flex: 1, justifyContent: "center", alignItems: "center" },
+  errorContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
+  errorText: { fontSize: 16, color: "red", fontWeight: "bold" },
+  card: { marginBottom: 10, padding: 10, backgroundColor: "#fff" },
+  title: { fontSize: 18, fontWeight: "bold", color: "#00796B" },
+  subtitle: { fontSize: 16, fontWeight: "600", marginTop: 5 },
+  symptoms: { fontSize: 14, color: "#555", marginTop: 5 },
+  treatment: { fontSize: 14, marginTop: 5, fontStyle: "italic" },
+  image: { width: "100%", height: 150, marginTop: 10, borderRadius: 5 },
+  date: { fontSize: 12, marginTop: 5, color: "#888" },
 });
+
+export default HistoryScreen;

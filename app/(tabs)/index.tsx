@@ -10,6 +10,9 @@ import {
   Modal,
   // Image,
   Platform,
+  TextInput,
+  ImageBackground,
+  ActivityIndicator,
 } from "react-native";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import { useNavigation } from "@react-navigation/native";
@@ -20,6 +23,16 @@ import FastImage from "react-native-fast-image";
 import { Image } from "expo-image";
 import WebView from "react-native-webview";
 import History from "../../components/History"; // Adjust the path accordingly
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import ModalPopup from "react-native-modal";
+import { jwtDecode } from "jwt-decode";
+
+interface DecodedToken {
+  id: number;
+  name: string; // Added name property
+  exp: number;
+}
+const API_URL = "https://cropdocback.onrender.com"; // Your backend URL
 
 const API_KEY = "4d79f2da5973a1e175cfab477f714084";
 
@@ -34,6 +47,125 @@ const IndexScreen = () => {
   const [showHistory, setShowHistory] = useState(false);
 
   const navigation = useNavigation();
+
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [password, setPassword] = useState("");
+  const [token, setToken] = useState("");
+  const [userId, setUserId] = useState<number | null>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [modalVisible, setModalVisible] = useState(true);
+  const [isLoginMode, setIsLoginMode] = useState(true);
+  const [userName, setUserName] = useState(""); // New state for user's name
+
+  // Optionally, you could check AsyncStorage for an existing token here.
+
+  // Handle Registration
+  const handleRegister = async () => {
+    if (!name || !phone || !password) {
+      Alert.alert("Error", "Please fill all fields");
+      return;
+    }
+    try {
+      const response = await fetch(`${API_URL}/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, phone, password }),
+      });
+      const data = await response.json();
+
+      if (response.ok) {
+        Alert.alert("Success", "Registered successfully!");
+        // Optionally, switch to login mode after registration
+        setIsLoginMode(true);
+      } else {
+        Alert.alert("Registration Error", data.error || "Unknown error");
+      }
+    } catch (error: any) {
+      Alert.alert("Registration Error", error.message);
+    }
+  };
+
+  // Handle Login
+  const handleLogin = async () => {
+    // Trim input to avoid accidental spaces
+    const trimmedPhone = phone.trim();
+    const trimmedPassword = password.trim();
+
+    if (!trimmedPhone || !trimmedPassword) {
+      Alert.alert("Error", "Phone and password are required");
+      return;
+    }
+    try {
+      const response = await fetch(`${API_URL}/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          phone: trimmedPhone,
+          password: trimmedPassword,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Login failed. Please try again.");
+      }
+
+      const data = await response.json();
+      Alert.alert("Success", "Logged in successfully!");
+
+      // const data = await response.json();
+
+      // Store token securely
+      await AsyncStorage.setItem("token", data.token);
+      setToken(data.token);
+
+      // if (response.ok) {
+      //   Alert.alert("Success", "Logged in successfully!");
+      //   setToken(data.token);
+
+      //   await AsyncStorage.setItem("token", data.token);
+      // }
+
+      try {
+        const decoded = jwtDecode<DecodedToken>(data.token);
+        setUserId(decoded.id);
+        setUserName(decoded.name);
+        // setPhone(decoded.phone);
+        setIsLoggedIn(true);
+
+        // await AsyncStorage.setItem("Phone", decoded.phone.toString());
+        // Store userId in AsyncStorage (Optional)
+        await AsyncStorage.setItem("userId", decoded.id.toString());
+      } catch (decodeError) {
+        console.error("JWT Decode Error:", decodeError);
+        Alert.alert("Error", "Failed to process login data.");
+        return;
+      }
+      // Decode JWT Token to get user info
+      // const decoded = jwtDecode<DecodedToken>(data.token);
+      // setUserId(decoded.id);
+      // setUserName(decoded.name);
+      // setIsLoggedIn(true);
+      // Close the modal after successful login
+      // setModalVisible(false);
+      //  else {
+      // Alert.alert("Login Error", data.error || "Unknown error");
+      // }
+    } catch (error: any) {
+      Alert.alert("Login Error", error.message);
+      console.error("Login Error:", error);
+    }
+  };
+
+  // Optional: close modal if user is logged in
+  useEffect(() => {
+    if (isLoggedIn) {
+      setModalVisible(false);
+    } else {
+      setModalVisible(true);
+    }
+  }, [isLoggedIn]);
 
   useEffect(() => {
     getLocation(); // Fetch location and weather on component mount
@@ -94,6 +226,20 @@ const IndexScreen = () => {
       console.error(error);
     }
   };
+  const handleAuth = async () => {
+    setLoading(true); // Show loader
+    try {
+      if (isLoginMode) {
+        await handleLogin();
+      } else {
+        await handleRegister();
+      }
+    } catch (error) {
+      console.error("Authentication error:", error);
+    } finally {
+      setLoading(false); // Hide loader after process
+    }
+  };
 
   return (
     <ScrollView style={styles.containerr}>
@@ -110,6 +256,14 @@ const IndexScreen = () => {
 
       {/* Weather Section */}
       <View style={styles.container}>
+        <Text style={styles.title}>क्रॉपडॉकमध्ये आपले स्वागत आहे!</Text>
+        {isLoggedIn ? (
+          <Text style={styles.welcomeText}>{userName}</Text>
+        ) : (
+          <Text style={styles.infoText}>
+            Please login or register to continue.
+          </Text>
+        )}
         <Link href="/explore" style={styles.card}>
           {weather ? (
             <View style={styles.weatherCard}>
@@ -188,16 +342,18 @@ const IndexScreen = () => {
 
         {/* Community Forum Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>👥 शेतकरी चर्चा मंच</Text>
+          <Text style={styles.sectionTitle}>👥 पीक शिफारस मंच</Text>
           <Text style={styles.description}>
-            शेतकरी आपले अनुभव आणि माहिती शेअर करू शकतात.
+            शेतकऱ्यांना त्यांच्या जमिनीच्या प्रकारानुसार, मातीच्या
+            गुणवत्तेनुसार, हवामानाच्या परिस्थितीनुसार आणि इतर घटकांवर आधारित
+            योग्य पीक निवडण्यास मदत करेल.
           </Text>
           <TouchableOpacity
             style={styles.customButton}
             // onPress={() => console.log("Navigate to forum")}
             onPress={() => router.push("/community")}
           >
-            <Text style={styles.customButtonText}>चर्चा सुरू करा</Text>
+            <Text style={styles.customButtonText}>पीक शिफारस</Text>
           </TouchableOpacity>
         </View>
 
@@ -264,13 +420,175 @@ const IndexScreen = () => {
             style={{ width: "100%", height: "100%", borderRadius: 10 }}
           />
         </View>
+
+        {/* <Text style={styles.title}>क्रॉपडॉकमध्ये आपले स्वागत आहे!</Text>
+        {isLoggedIn ? (
+          <Text style={styles.welcomeText}>{userName}</Text>
+        ) : (
+          <Text style={styles.infoText}>
+            Please login or register to continue.
+          </Text>
+        )} */}
+
+        {/* The modal automatically shows if not logged in */}
       </View>
+      <ModalPopup
+        isVisible={modalVisible}
+        onBackdropPress={() => setModalVisible(false)}
+      >
+        <ImageBackground
+          source={{
+            uri: "https://c4.wallpaperflare.com/wallpaper/141/564/859/aerial-photo-of-trees-near-body-of-water-under-gray-clouds-lake-wanaka-lake-wanaka-wallpaper-preview.jpg",
+          }}
+          style={{
+            flex: 0,
+            justifyContent: "center",
+            alignItems: "center",
+            width: "100%",
+            height: "100%",
+          }}
+        >
+          <View
+            style={{
+              width: "90%",
+              padding: 20,
+              backgroundColor: "rgba(0, 0, 0, 0.8)",
+              borderRadius: 10,
+              alignItems: "center",
+              shadowColor: "#000",
+              shadowOffset: { width: 0, height: 5 },
+              shadowOpacity: 0.3,
+              shadowRadius: 5,
+              elevation: 10,
+            }}
+          >
+            <Text
+              style={{
+                fontSize: 22,
+                fontWeight: "bold",
+                color: "#fff",
+                marginBottom: 15,
+              }}
+            >
+              {isLoginMode ? "Login" : "Register"}
+            </Text>
+
+            {!isLoginMode && (
+              <TextInput
+                placeholder="Enter Name"
+                value={name}
+                onChangeText={setName}
+                placeholderTextColor="#ccc"
+                style={{
+                  width: "100%",
+                  padding: 12,
+                  marginBottom: 10,
+                  borderWidth: 1,
+                  borderColor: "#ccc",
+                  borderRadius: 5,
+                  backgroundColor: "rgba(255, 255, 255, 0.2)",
+                  color: "#fff",
+                }}
+              />
+            )}
+
+            <TextInput
+              placeholder="Enter Phone"
+              value={phone}
+              onChangeText={setPhone}
+              placeholderTextColor="#ccc"
+              keyboardType="phone-pad"
+              style={{
+                width: "100%",
+                padding: 12,
+                marginBottom: 10,
+                borderWidth: 1,
+                borderColor: "#ccc",
+                borderRadius: 5,
+                backgroundColor: "rgba(255, 255, 255, 0.2)",
+                color: "#fff",
+              }}
+            />
+
+            <TextInput
+              placeholder="Enter Password"
+              value={password}
+              onChangeText={setPassword}
+              placeholderTextColor="#ccc"
+              secureTextEntry
+              style={{
+                width: "100%",
+                padding: 12,
+                marginBottom: 10,
+                borderWidth: 1,
+                borderColor: "#ccc",
+                borderRadius: 5,
+                backgroundColor: "rgba(255, 255, 255, 0.2)",
+                color: "#fff",
+              }}
+            />
+
+            {loading ? (
+              <ActivityIndicator
+                size="large"
+                color="#28a745"
+                style={{ marginVertical: 10 }}
+              />
+            ) : (
+              <>
+                <View style={{ width: "100%", marginTop: 10 }}>
+                  <Button
+                    title={isLoginMode ? "Login" : "Register"}
+                    onPress={handleAuth}
+                    color="#28a745"
+                  />
+                </View>
+
+                <View style={{ width: "100%", marginTop: 10 }}>
+                  <Button
+                    title={
+                      isLoginMode ? "Switch to Register" : "Switch to Login"
+                    }
+                    onPress={() => setIsLoginMode(!isLoginMode)}
+                    color="#007bff"
+                  />
+                </View>
+              </>
+            )}
+          </View>
+        </ImageBackground>
+      </ModalPopup>
     </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
   // Layout Styles
+  modalContainer: {
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  infoText: {
+    fontSize: 16,
+    marginBottom: 10,
+  },
+  welcomeText: { fontSize: 18, color: "green" },
+  modal: { backgroundColor: "white", padding: 20, borderRadius: 10 },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    textAlign: "center",
+    marginBottom: 10,
+  },
+
+  input: {
+    borderWidth: 1,
+    padding: 10,
+    marginVertical: 5,
+    width: 200,
+    borderRadius: 5,
+  },
+
   description: {
     fontSize: 20,
     fontWeight: "400",

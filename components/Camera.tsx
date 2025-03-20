@@ -1,5 +1,5 @@
 import { CameraView, CameraType, useCameraPermissions } from "expo-camera";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   Button,
   Image,
@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import * as FileSystem from "expo-file-system";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 type CameraComponentProps = {
   onClose: () => void;
@@ -28,6 +29,7 @@ export default function CameraScreen({ onClose }: CameraComponentProps) {
   const [treatmentResult, setTreatmentResult] = useState<any[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [loading, setLoading] = useState(false);
+  // const [token, setToken] = useState<string | null>(null);
 
   if (!permission) {
     return <View />;
@@ -42,9 +44,9 @@ export default function CameraScreen({ onClose }: CameraComponentProps) {
     );
   }
 
-  const apiUrl = "http://172.17.106.116:7000/predict";
+  const apiUrl = "http:// 172.17.106.246:7000/predict";
 
-  const identificationApiUrl = "http://172.17.106.116:5000/identify";
+  const identificationApiUrl = "http:// 172.17.106.246:5000/identify";
 
   async function uploadImage(imageUri: string) {
     setLoading(true); // Start loading before the request
@@ -90,18 +92,33 @@ export default function CameraScreen({ onClose }: CameraComponentProps) {
 
         // ✅ Ensure `result.prediction` exists before making second API call
         // if (prediction.trim()) {
+
         // Construct dynamic API URL with the prediction
-        const treatmentApiUrl = `http://172.17.106.148:3000/treatment/${encodeURIComponent(
+        const treatmentApiUrl = `https://cropdocback.onrender.com/treatment/${encodeURIComponent(
           diseasePrediction
         )}`;
+
+        // Retrieve the token from AsyncStorage
+        const token = await AsyncStorage.getItem("token");
+        if (!token) {
+          throw new Error("No token found in storage");
+        }
 
         // Call Treatment API
         const treatmentResponse = await fetch(treatmentApiUrl, {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+            // Include the Bearer token for authentication
           },
         });
+
+        if (!treatmentResponse.ok) {
+          const errorText = await treatmentResponse.text();
+          throw new Error(`Error fetching treatment data: ${errorText}`);
+          return;
+        }
 
         const treatmentData = await treatmentResponse.text();
         console.log(`Treatment data for ${diseasePrediction}:`, treatmentData);
